@@ -4,11 +4,57 @@ bg_zero = "#f0f0f0"
 bg_one = "#c0c0c0"
 
 
+class CalData:
+    def __init__(self):
+        self.x1 = 0
+        self.opt = ""
+        self.rlt = 0
+        self.cal_str = ''
+
+        self.opts = "+-*/&|"
+
+    def is_opts_valid(self, opt):
+        if len(opt) != 1:
+            return False
+        return opt in self.opts
+
+    def update_opt(self, opt):
+        if not self.is_opts_valid(opt):
+            return
+        self.opt = opt
+
+    def update_x1(self, x1, opt):
+        self.x1 = x1
+        self.update_opt(opt)
+        self.cal_str = str(x1) + ' ' + opt + ' '
+
+    def cal_rlt(self, x2):
+        print(f"x1:{self.x1},x2:{x2},opt:{self.opt}")
+        if self.opt == '+':
+            self.rlt = self.x1 + x2
+        elif self.opt == "-":
+            self.rlt = self.x1 - x2
+        elif self.opt == "*":
+            self.rlt = self.x1 * x2
+        elif self.opt == "/":
+            self.rlt = self.x1 / x2
+        elif self.opt == "&":
+            self.rlt = self.x1 & x2
+        elif self.opt == "|":
+            self.rlt = self.x1 | x2
+
+        self.cal_str = self.cal_str + str(x2) + ' = ' + str(self.rlt)
+        return self.rlt
+
+
 class CoreData:
     def __init__(self):
         self.bits = [0 for i in range(0, 64)]
         self.dec = 0
         self.hex = '0x0'
+        self.cal_data = CalData()
+
+        self.cal_str = tk.StringVar(root, '')
 
     def refresh_by_dec(self):
         dec_temp = self.dec
@@ -108,6 +154,20 @@ def right_shift():
     show_all()
 
 
+def root_call_back(event):
+    global g_data
+    if g_data.cal_data.is_opts_valid(event.char):
+        g_data.cal_data.update_x1(g_data.dec, event.char)
+        print(g_data.cal_data.cal_str)
+
+    if event.char == '\r':
+        g_data.dec = g_data.cal_data.cal_rlt(g_data.dec)
+        g_data.refresh_by_dec()
+        show_all()
+        g_data.cal_str.set(g_data.cal_data.cal_str)
+        print(g_data.cal_data.cal_str)
+
+
 def main(root_win):
     global g_data, hex_show, dec_show, button_list, shift_val
     button_width = 1
@@ -159,6 +219,11 @@ def main(root_win):
     tk.Button(root_win, text='<<', width=2, command=left_shift).grid(row=4, column=25, columnspan=2, sticky=tk.E)
     tk.Entry(root_win, width=2, textvariable=shift_val).grid(row=4, column=27, columnspan=2)
     tk.Button(root_win, text='>>', width=2, command=right_shift).grid(row=4, column=29, columnspan=2, sticky=tk.W)
+
+    ''' 运算区 '''
+    root.bind("<Key>", root_call_back)
+    tk.Label(root_win, textvariable=g_data.cal_str, width=39, font=("", 8)) \
+        .grid(row=5, column=0, columnspan=39)
 
     tk.mainloop()
 
