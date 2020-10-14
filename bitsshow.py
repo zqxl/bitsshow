@@ -112,14 +112,6 @@ def refresh_bits(event):
     show_all()
 
 
-def refresh_hex(content, reason, name):
-    global g_data, hex_show
-    g_data.dec = int(content, 16)
-    g_data.refresh_by_dec()
-    show_all()
-    return True
-
-
 def refresh_hex_button():
     global g_data, hex_show
     refresh_hex(hex_show.get(), 0, 0)
@@ -128,6 +120,13 @@ def refresh_hex_button():
 def refresh_dec_button():
     global g_data, dec_show
     refresh_dec(dec_show.get(), 0, 0)
+
+def refresh_hex(content, reason, name):
+    global g_data, hex_show
+    g_data.dec = int(content, 16)
+    g_data.refresh_by_dec()
+    show_all()
+    return True
 
 
 def refresh_dec(content, reason, name):
@@ -154,13 +153,31 @@ def right_shift():
     show_all()
 
 
+def del_invalid_in_input(c):
+    button_list[0].focus_set()
+    if c in dec_show.get():
+        dec_show.set(dec_show.get()[0:-1])
+        refresh_dec_button()
+    elif c in hex_show.get():
+        hex_show.set(hex_show.get()[0:-1])
+        refresh_hex_button()
+
+
 def root_call_back(event):
-    global g_data
+    global g_data, button_list, dec_show, hex_show
+    if event.char == '!':
+        return
     if g_data.cal_data.is_opts_valid(event.char):
         g_data.cal_data.update_x1(g_data.dec, event.char)
+        g_data.cal_str.set(g_data.cal_data.cal_str)
         print(g_data.cal_data.cal_str)
 
-    if event.char == '\r':
+    if event.char == '+':
+        del_invalid_in_input('+')
+
+    if event.char == '=':
+        del_invalid_in_input('=')
+
         g_data.dec = g_data.cal_data.cal_rlt(g_data.dec)
         g_data.refresh_by_dec()
         show_all()
@@ -198,9 +215,7 @@ def main(root_win):
     tk.Label(root_win, text='hex:', width=button_width * 4).grid(row=4, column=0, columnspan=2, sticky=tk.E)
     refresh_hex_cmd = root_win.register(refresh_hex)
     entry_hex = tk.Entry(root_win, width=button_width * 18,
-                         textvariable=hex_show,
-                         validate='focusout',
-                         validatecommand=(refresh_hex_cmd, '%P', '%v', '%W'))
+                         textvariable=hex_show)
     entry_hex.grid(row=4, column=2, columnspan=8, sticky=tk.W)
     entry_hex_b = tk.Button(root_win, text='ok', width=button_width * 2, command=refresh_hex_button)
     entry_hex_b.grid(row=4, column=10, columnspan=2, sticky=tk.W)
@@ -208,9 +223,7 @@ def main(root_win):
     tk.Label(root_win, text='dec:', width=button_width * 4).grid(row=4, column=12, columnspan=2, sticky=tk.E)
     refresh_dec_cmd = root_win.register(refresh_dec)
     entry_dec = tk.Entry(root_win, width=button_width * 18,
-                         textvariable=dec_show,
-                         validate='focusout',
-                         validatecommand=(refresh_dec_cmd, '%P', '%v', '%W'))
+                         textvariable=dec_show)
     entry_dec.grid(row=4, column=14, columnspan=8, sticky=tk.W)
     entry_dec_b = tk.Button(root_win, text='ok', width=button_width * 2, command=refresh_dec_button)
     entry_dec_b.grid(row=4, column=22, columnspan=2, sticky=tk.W)
