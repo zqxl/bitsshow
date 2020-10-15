@@ -1,4 +1,6 @@
 import tkinter as tk
+import time
+import _thread
 
 bg_zero = "#f0f0f0"
 bg_one = "#c0c0c0"
@@ -54,9 +56,13 @@ class CoreData:
         self.hex = '0x0'
         self.cal_data = CalData()
 
+        self.root_win = root_win
+        self.top = 0
         self.cal_str = tk.StringVar(root, '')
         self.entry_dec = tk.Entry(root_win, width=18, textvariable=dec_show)
         self.entry_hex = tk.Entry(root_win, width=18, textvariable=hex_show)
+
+        self.wait_cmd_str = ""
 
     def refresh_by_dec(self):
         dec_temp = self.dec
@@ -123,6 +129,7 @@ def refresh_dec_button():
     global g_data, dec_show
     refresh_dec(dec_show.get(), 0, 0)
 
+
 def refresh_hex(content, reason, name):
     global g_data, hex_show
     g_data.dec = int(content, 16)
@@ -168,16 +175,32 @@ def del_invalid_in_input(c):
         refresh_hex_button()
 
 
-valid_char = "0123456789abcdefABCDEFxX"
+def detect_cmd(c, target_str):
+    global g_data
+    if c == ',' or c == '，':
+        g_data.wait_cmd_str = ','
+    else:
+        if len(g_data.wait_cmd_str) == 0:
+            return False
+        if g_data.wait_cmd_str[0] == ',':
+            g_data.wait_cmd_str = g_data.wait_cmd_str + c
+        if g_data.wait_cmd_str == target_str:
+            return True
+        if len(g_data.wait_cmd_str) > 10:
+            g_data.wait_cmd_str = ''
+    return False
+
+
 def root_call_back(event):
     global g_data, button_list, dec_show, hex_show
+    valid_char = "0123456789abcdefABCDEFxX"
     print(event.char)
-    if (event.char not in valid_char):
+    if event.char not in valid_char:
         del_invalid_in_input(event.char)
     if event.char == '@':
         g_data.entry_dec.focus_set()
         return
-    if event.char == '!':
+    if event.char == '!' or event.char == '！':
         g_data.entry_hex.focus_set()
         return
     if g_data.cal_data.is_opts_valid(event.char):
@@ -199,12 +222,30 @@ def root_call_back(event):
         g_data.cal_str.set(g_data.cal_data.cal_str)
         print(g_data.cal_data.cal_str)
 
+    if detect_cmd(event.char, ",top"):
+        if g_data.top == 0:
+            g_data.top = 1
+            g_data.root_win.wm_attributes('-topmost', 1)
+        else:
+            g_data.top = 0
+
+
+def keep_win_top(arg1, arg2):
+    global g_data
+    while 1:
+        if g_data.top:
+            g_data.root_win.wm_attributes('-topmost', 1)
+        else:
+            g_data.root_win.wm_attributes('-topmost', 0)
+        time.sleep(0.1)
+
 
 def main(root_win):
     global g_data, hex_show, dec_show, button_list, shift_val
     button_width = 1
 
     root_win.title('bitsshow')
+    _thread.start_new_thread(keep_win_top, ("Thread-1", 2,))
 
     # buttons area
     button_index = 64
