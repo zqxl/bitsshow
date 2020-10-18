@@ -28,7 +28,7 @@ class CalData:
     def update_x1(self, x1, opt):
         self.x1 = x1
         self.update_opt(opt)
-        self.cal_str = str(x1) + ' ' + opt + ' '
+        self.cal_str = hex(x1) + ' ' + opt + ' '
 
     def cal_rlt(self, x2):
         print(f"x1:{self.x1},x2:{x2},opt:{self.opt}")
@@ -45,7 +45,7 @@ class CalData:
         elif self.opt == "|":
             self.rlt = self.x1 | x2
 
-        self.cal_str = self.cal_str + str(x2) + ' = ' + str(self.rlt)
+        self.cal_str = hex(self.x1) + ' ' + self.opt + ' ' + hex(x2) + ' = ' + hex(self.rlt)
         return self.rlt
 
 
@@ -57,12 +57,16 @@ class CoreData:
         self.cal_data = CalData()
 
         self.root_win = root_win
-        self.top = 0
         self.cal_str = tk.StringVar(root, '')
         self.entry_dec = tk.Entry(root_win, width=18, textvariable=dec_show)
         self.entry_hex = tk.Entry(root_win, width=18, textvariable=hex_show)
+        self.top_v = tk.IntVar()
+        self.top = tk.Checkbutton(root_win, width=4, text='top', variable=self.top_v, command=self.top_callback)
 
         self.wait_cmd_str = ""
+
+    def top_callback(self):
+        print(self.top_v.get())
 
     def refresh_by_dec(self):
         dec_temp = self.dec
@@ -208,10 +212,6 @@ def root_call_back(event):
         g_data.cal_str.set(g_data.cal_data.cal_str)
         print(g_data.cal_data.cal_str)
 
-    if event.char == '+':
-        button_list[0].focus_set()
-        del_invalid_in_input('+')
-
     if event.char == '=':
         button_list[0].focus_set()
         del_invalid_in_input('=')
@@ -223,17 +223,16 @@ def root_call_back(event):
         print(g_data.cal_data.cal_str)
 
     if detect_cmd(event.char, ",top"):
-        if g_data.top == 0:
-            g_data.top = 1
-            g_data.root_win.wm_attributes('-topmost', 1)
+        if g_data.top_v.get() == 0:
+            g_data.top_v.set(1)
         else:
-            g_data.top = 0
+            g_data.top_v.set(0)
 
 
 def keep_win_top(arg1, arg2):
     global g_data
     while 1:
-        if g_data.top:
+        if g_data.top_v.get():
             g_data.root_win.wm_attributes('-topmost', 1)
         else:
             g_data.root_win.wm_attributes('-topmost', 0)
@@ -282,10 +281,11 @@ def main(root_win):
     tk.Button(root_win, text='<<', width=2, command=left_shift).grid(row=4, column=25, columnspan=2, sticky=tk.E)
     tk.Entry(root_win, width=2, textvariable=shift_val).grid(row=4, column=27, columnspan=2)
     tk.Button(root_win, text='>>', width=2, command=right_shift).grid(row=4, column=29, columnspan=2, sticky=tk.W)
+    g_data.top.grid(row=4, column=31, columnspan=4, sticky=tk.W)
 
     ''' 运算区 '''
     root.bind("<Key>", root_call_back)
-    tk.Label(root_win, textvariable=g_data.cal_str, width=39, font=("", 8)) \
+    tk.Label(root_win, textvariable=g_data.cal_str, width=117, font=("", 8)) \
         .grid(row=5, column=0, columnspan=39)
 
     tk.mainloop()
