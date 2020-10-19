@@ -58,8 +58,10 @@ class CoreData:
 
         self.root_win = root_win
         self.cal_str = tk.StringVar(root, '')
-        self.entry_dec = tk.Entry(root_win, width=18, textvariable=dec_show)
+        self.entry_dec = tk.Entry(root_win, width=20, textvariable=dec_show)
         self.entry_hex = tk.Entry(root_win, width=18, textvariable=hex_show)
+        self.shift_val = tk.StringVar(root, '01')
+        self.entry_shift_val = tk.Entry(root_win, width=2, textvariable=self.shift_val)
         self.top_v = tk.IntVar()
         self.top = tk.Checkbutton(root_win, width=4, text='top', variable=self.top_v, command=self.top_callback)
 
@@ -69,6 +71,8 @@ class CoreData:
         print(self.top_v.get())
 
     def refresh_by_dec(self):
+        if self.dec > 18446744073709551615:
+            self.dec = 18446744073709551615
         dec_temp = self.dec
         for i in range(0, 64):
             self.bits[i] = dec_temp & 0x1
@@ -151,22 +155,23 @@ def refresh_dec(content, reason, name):
 
 
 def left_shift():
-    global dec_show, shift_val
-    shift = int(shift_val.get())
+    global dec_show, g_data
+    shift = int(g_data.shift_val.get())
     g_data.dec = int(dec_show.get()) << shift
     g_data.refresh_by_dec()
     show_all()
 
 
 def right_shift():
-    global dec_show, shift_val
-    shift = int(shift_val.get())
+    global dec_show, g_data
+    shift = int(g_data.shift_val.get())
     g_data.dec = int(dec_show.get()) >> shift
     g_data.refresh_by_dec()
     show_all()
 
 
 def del_invalid_in_input(c):
+    global g_data
     if c in dec_show.get():
         str_temp = dec_show.get()
         str_temp = str_temp.replace(c, '')
@@ -177,6 +182,10 @@ def del_invalid_in_input(c):
         str_temp = str_temp.replace(c, '')
         hex_show.set(str_temp)
         refresh_hex_button()
+    elif c in g_data.shift_val.get():
+        str_temp = g_data.shift_val.get()
+        str_temp = str_temp.replace(c, '')
+        g_data.shift_val.set(str_temp)
 
 
 def detect_cmd(c, target_str):
@@ -205,26 +214,45 @@ def find_input_entry_and_update():
 
 def root_call_back(event):
     global g_data, button_list, dec_show, hex_show
-    valid_char = "0123456789abcdefABCDEFxX"
-    if event.char == '@':
-        g_data.entry_dec.focus_set()
-    if event.char == '!' or event.char == '！':
-        g_data.entry_hex.focus_set()
-    if event.char == '=':
-        button_list[0].focus_set()
-        del_invalid_in_input('=')
 
-        g_data.dec = g_data.cal_data.cal_rlt(g_data.dec)
-        g_data.refresh_by_dec()
-        show_all()
-        g_data.cal_str.set(g_data.cal_data.cal_str)
+    valid_char = "0123456789abcdefABCDEFxX"
     if event.char in valid_char or event.char == '\b':
         find_input_entry_and_update()
     else:
         del_invalid_in_input(event.char)
+
+    if event.char in valid_char or event.char == '\b':
+        find_input_entry_and_update()
+    else:
+        del_invalid_in_input(event.char)
+
+    if event.char == '@':
+        g_data.entry_dec.focus_set()
+    if event.char == '!' or event.char == '！':
+        g_data.entry_hex.focus_set()
+    if event.char == '#':
+        g_data.entry_shift_val.focus_set()
+    if event.char == '=':
+        button_list[0].focus_set()
+        g_data.dec = g_data.cal_data.cal_rlt(g_data.dec)
+        g_data.refresh_by_dec()
+        show_all()
+        g_data.cal_str.set(g_data.cal_data.cal_str)
     if g_data.cal_data.is_opts_valid(event.char):
         g_data.cal_data.update_x1(g_data.dec, event.char)
         g_data.cal_str.set(g_data.cal_data.cal_str)
+    if event.char == 'h':
+        left_shift()
+    if event.char == 'l':
+        right_shift()
+    if event.char == 'j':
+        g_data.dec = int(dec_show.get()) >> 32
+        g_data.refresh_by_dec()
+        show_all()
+    if event.char == 'k':
+        g_data.dec = int(dec_show.get()) << 32
+        g_data.refresh_by_dec()
+        show_all()
 
     if detect_cmd(event.char, ",t"):
         if g_data.top_v.get() == 0:
@@ -274,18 +302,18 @@ def main(root_win):
     tk.Label(root_win, text='hex:', width=button_width * 4).grid(row=4, column=0, columnspan=2, sticky=tk.E)
     g_data.entry_hex.grid(row=4, column=2, columnspan=8, sticky=tk.W)
 
-    tk.Label(root_win, text='dec:', width=button_width * 4).grid(row=4, column=10, columnspan=2, sticky=tk.E)
-    g_data.entry_dec.grid(row=4, column=12, columnspan=10, sticky=tk.W)
+    tk.Label(root_win, text='dec:', width=button_width * 4).grid(row=4, column=8, columnspan=2, sticky=tk.E)
+    g_data.entry_dec.grid(row=4, column=10, columnspan=10, sticky=tk.W)
 
     ''' left and right shift '''
     tk.Button(root_win, text='<<', width=2, command=left_shift).grid(row=4, column=25, columnspan=2, sticky=tk.E)
-    tk.Entry(root_win, width=2, textvariable=shift_val).grid(row=4, column=27, columnspan=2)
+    g_data.entry_shift_val.grid(row=4, column=27, columnspan=2)
     tk.Button(root_win, text='>>', width=2, command=right_shift).grid(row=4, column=29, columnspan=2, sticky=tk.W)
     g_data.top.grid(row=4, column=31, columnspan=4, sticky=tk.W)
 
     ''' 运算区 '''
     root.bind("<Key>", root_call_back)
-    tk.Label(root_win, textvariable=g_data.cal_str, width=117, font=("", 8)) \
+    tk.Label(root_win, textvariable=g_data.cal_str, width=117) \
         .grid(row=5, column=0, columnspan=39)
 
     tk.mainloop()
@@ -306,7 +334,6 @@ if __name__ == '__main__':
     root.resizable(0, 0)
     hex_show = tk.StringVar(root, '0x0')
     dec_show = tk.StringVar(root, '0')
-    shift_val = tk.StringVar(root, '01')
     button_list = [tk.Button(root) for x in range(0, 64)]
 
     g_data = CoreData(root)
