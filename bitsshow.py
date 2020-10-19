@@ -195,23 +195,21 @@ def detect_cmd(c, target_str):
     return False
 
 
+def find_input_entry_and_update():
+    global g_data, dec_show, hex_show
+    if int(dec_show.get(), 10) != g_data.dec:
+        refresh_dec(dec_show.get(), 0, 0)
+    if int(hex_show.get(), 16) != g_data.dec:
+        refresh_hex(hex_show.get(), 0, 0)
+
+
 def root_call_back(event):
     global g_data, button_list, dec_show, hex_show
     valid_char = "0123456789abcdefABCDEFxX"
-    print(event.char)
-    if event.char not in valid_char:
-        del_invalid_in_input(event.char)
     if event.char == '@':
         g_data.entry_dec.focus_set()
-        return
     if event.char == '!' or event.char == '！':
         g_data.entry_hex.focus_set()
-        return
-    if g_data.cal_data.is_opts_valid(event.char):
-        g_data.cal_data.update_x1(g_data.dec, event.char)
-        g_data.cal_str.set(g_data.cal_data.cal_str)
-        print(g_data.cal_data.cal_str)
-
     if event.char == '=':
         button_list[0].focus_set()
         del_invalid_in_input('=')
@@ -220,9 +218,15 @@ def root_call_back(event):
         g_data.refresh_by_dec()
         show_all()
         g_data.cal_str.set(g_data.cal_data.cal_str)
-        print(g_data.cal_data.cal_str)
+    if event.char in valid_char or event.char == '\b':
+        find_input_entry_and_update()
+    else:
+        del_invalid_in_input(event.char)
+    if g_data.cal_data.is_opts_valid(event.char):
+        g_data.cal_data.update_x1(g_data.dec, event.char)
+        g_data.cal_str.set(g_data.cal_data.cal_str)
 
-    if detect_cmd(event.char, ",top"):
+    if detect_cmd(event.char, ",t"):
         if g_data.top_v.get() == 0:
             g_data.top_v.set(1)
         else:
@@ -269,13 +273,9 @@ def main(root_win):
     ''' hex and dec '''
     tk.Label(root_win, text='hex:', width=button_width * 4).grid(row=4, column=0, columnspan=2, sticky=tk.E)
     g_data.entry_hex.grid(row=4, column=2, columnspan=8, sticky=tk.W)
-    entry_hex_b = tk.Button(root_win, text='ok', width=button_width * 2, command=refresh_hex_button)
-    entry_hex_b.grid(row=4, column=10, columnspan=2, sticky=tk.W)
 
-    tk.Label(root_win, text='dec:', width=button_width * 4).grid(row=4, column=12, columnspan=2, sticky=tk.E)
-    g_data.entry_dec.grid(row=4, column=14, columnspan=8, sticky=tk.W)
-    entry_dec_b = tk.Button(root_win, text='ok', width=button_width * 2, command=refresh_dec_button)
-    entry_dec_b.grid(row=4, column=22, columnspan=2, sticky=tk.W)
+    tk.Label(root_win, text='dec:', width=button_width * 4).grid(row=4, column=10, columnspan=2, sticky=tk.E)
+    g_data.entry_dec.grid(row=4, column=12, columnspan=10, sticky=tk.W)
 
     ''' left and right shift '''
     tk.Button(root_win, text='<<', width=2, command=left_shift).grid(row=4, column=25, columnspan=2, sticky=tk.E)
