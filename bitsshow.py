@@ -1,6 +1,8 @@
 import tkinter as tk
 import time
 import _thread
+import win32api
+import win32con
 
 bg_zero = "#f0f0f0"
 bg_one = "#c0c0c0"
@@ -198,6 +200,7 @@ def detect_cmd(c, target_str):
         if g_data.wait_cmd_str[0] == ',':
             g_data.wait_cmd_str = g_data.wait_cmd_str + c
         if g_data.wait_cmd_str == target_str:
+            g_data.wait_cmd_str = ''
             return True
         if len(g_data.wait_cmd_str) > 10:
             g_data.wait_cmd_str = ''
@@ -228,10 +231,13 @@ def root_call_back(event):
 
     if event.char == '@':
         g_data.entry_dec.focus_set()
+        win32api.keybd_event(35, 0, 0, 0)
     if event.char == '!' or event.char == '！':
         g_data.entry_hex.focus_set()
+        win32api.keybd_event(35, 0, 0, 0)
     if event.char == '#':
         g_data.entry_shift_val.focus_set()
+        win32api.keybd_event(35, 0, 0, 0)
     if event.char == '=':
         button_list[0].focus_set()
         g_data.dec = g_data.cal_data.cal_rlt(g_data.dec)
@@ -261,6 +267,13 @@ def root_call_back(event):
             g_data.top_v.set(0)
 
 
+def correct_all_input():
+    global hex_show
+    if hex_show.get()[0:2] != '0x':
+        hex_show.set("0x")
+        win32api.keybd_event(35, 0, 0, 0)
+
+
 def keep_win_top(arg1, arg2):
     global g_data
     while 1:
@@ -268,6 +281,12 @@ def keep_win_top(arg1, arg2):
             g_data.root_win.wm_attributes('-topmost', 1)
         else:
             g_data.root_win.wm_attributes('-topmost', 0)
+        try:
+            find_input_entry_and_update()
+            correct_all_input()
+        except ValueError:
+            pass
+
         time.sleep(0.1)
 
 
