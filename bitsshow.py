@@ -1,8 +1,9 @@
 import tkinter as tk
 import time
 import _thread
+import pywin
 import win32api
-import win32con
+
 
 bg_zero = "#f0f0f0"
 bg_one = "#c0c0c0"
@@ -291,7 +292,8 @@ def keep_win_top(arg1, arg2):
 
 
 def main(root_win):
-    global g_data, hex_show, dec_show, button_list, shift_val
+    global g_data, hex_show, dec_show, button_list
+
     button_width = 1
 
     root_win.title('bitsshow')
@@ -320,7 +322,6 @@ def main(root_win):
     ''' hex and dec '''
     tk.Label(root_win, text='hex:', width=button_width * 4).grid(row=4, column=0, columnspan=2, sticky=tk.E)
     g_data.entry_hex.grid(row=4, column=2, columnspan=8, sticky=tk.W)
-
     tk.Label(root_win, text='dec:', width=button_width * 4).grid(row=4, column=8, columnspan=2, sticky=tk.E)
     g_data.entry_dec.grid(row=4, column=10, columnspan=10, sticky=tk.W)
 
@@ -338,8 +339,8 @@ def main(root_win):
     tk.mainloop()
 
 
+'''
 if __name__ == '__main__':
-    '''
     data = CoreData()
     data.dec = 23
     data.refresh_by_dec()
@@ -349,12 +350,12 @@ if __name__ == '__main__':
     data.refresh_by_bits()
     data.print_self()
     '''
-    root = tk.Tk()
-    root.resizable(0, 0)
-    hex_show = tk.StringVar(root, '0x0')
-    dec_show = tk.StringVar(root, '0')
-    button_list = [tk.Button(root) for x in range(0, 64)]
+root = tk.Tk()
+root.resizable(0, 0)
+hex_show = tk.StringVar(root, '0x0')
+dec_show = tk.StringVar(root, '0')
+button_list = [tk.Button(root) for x in range(0, 64)]
 
-    g_data = CoreData(root)
+g_data = CoreData(root)
 
-    main(root)
+main(root)
