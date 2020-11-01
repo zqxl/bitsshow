@@ -32,7 +32,6 @@ class CalData:
         self.cal_str = hex(x1) + ' ' + opt + ' '
 
     def cal_rlt(self, x2):
-        print(f"x1:{self.x1},x2:{x2},opt:{self.opt}")
         if self.opt == '+':
             self.rlt = self.x1 + x2
         elif self.opt == "-":
@@ -59,10 +58,7 @@ class CoreData:
         self.dec = 0
         self.hex = '0x0'
         self.records = []
-<<<<<<< Updated upstream
-=======
         self.records_forward = []
->>>>>>> Stashed changes
         self.wait_cmd_str = ""
 
         self.cal_data = CalData()
@@ -141,24 +137,6 @@ class CoreData:
             dec_temp = dec_temp >> 1
         self.hex = hex(self.dec)
         self.show_all()
-<<<<<<< Updated upstream
-
-    def refresh_all(self, dec):
-        self.refresh_all_no_records(dec)
-        self.records.append(self.dec)
-        print(self.records)
-
-    def bits_callback(self, event):
-        if event.widget['text'] == '0':
-            event.widget['text'] = '1'
-            event.widget['bg'] = bg_one
-        else:
-            event.widget['text'] = '0'
-            event.widget['bg'] = bg_zero
-
-=======
-        print(f"r:{self.records}")
-        print(f"rf{self.records_forward}")
 
     def refresh_all(self, dec):
         self.refresh_all_no_records(dec)
@@ -175,7 +153,6 @@ class CoreData:
             event.widget['text'] = '0'
             event.widget['bg'] = bg_zero
 
->>>>>>> Stashed changes
         dec_temp = 0
         for i in range(0, 64):
             self.bits[i] = int(self.button_list[i]['text'], 10)
@@ -185,9 +162,6 @@ class CoreData:
 
     def correct_all_input(self):
         if len(self.hex_show.get()) < 2 or self.hex_show.get()[0:2] != '0x':
-<<<<<<< Updated upstream
-            self.hex_show.set("0x")
-=======
             hex_s = self.hex_show.get()
             num_s = 0
             for i in range(len(hex_s)-1, -1, -1):
@@ -200,7 +174,6 @@ class CoreData:
                 num_s = -1
             hex_s = '0x' + hex_s[num_s+1:len(hex_s)]
             self.refresh_all(int(hex_s, 16))
->>>>>>> Stashed changes
             win32api.keybd_event(35, 0, 0, 0)
 
     def find_input_entry_and_update(self):
@@ -239,11 +212,7 @@ class CoreData:
             time.sleep(0.1)
 
     def del_invalid_in_input(self, c):
-<<<<<<< Updated upstream
-        valid_char = "0123456789abcdefABCDEFxX"
-=======
         valid_char = "0123456789abcdefABCDEF"
->>>>>>> Stashed changes
         if c in valid_char:
             return
         if c in self.dec_show.get():
@@ -310,10 +279,6 @@ class CoreData:
             if len(self.records) == 0:
                 return
             dec = self.records.pop()
-<<<<<<< Updated upstream
-            print(self.records)
-            self.refresh_all_no_records(dec)
-=======
             self.records_forward.append(dec)
             self.refresh_all_no_records(dec)
             win32api.keybd_event(35, 0, 0, 0)
@@ -325,7 +290,6 @@ class CoreData:
             self.records.append(dec)
             self.refresh_all_no_records(dec)
             win32api.keybd_event(35, 0, 0, 0)
->>>>>>> Stashed changes
 
         if self.detect_cmd(event.char, ",t"):
             if self.top_v.get() == 0:
