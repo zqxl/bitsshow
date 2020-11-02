@@ -1,4 +1,5 @@
 import tkinter as tk
+import tkinter.messagebox
 import time
 import _thread
 import win32api
@@ -88,27 +89,37 @@ class CoreData:
         # hex and dec area
         tk.Label(self.root_win, text='hex:', width=4).grid(row=4, column=0, columnspan=2, sticky=tk.E)
         self.hex_show = tk.StringVar(self.root_win, '0x0')
-        self.entry_hex = tk.Entry(self.root_win, width=18, textvariable=self.hex_show)
-        self.entry_hex.grid(row=4, column=2, columnspan=8, sticky=tk.W)
+        self.entry_hex = tk.Entry(self.root_win, width=20, textvariable=self.hex_show)
+        self.entry_hex.grid(row=4, column=2, columnspan=10, sticky=tk.W)
 
-        tk.Label(self.root_win, text='dec:', width=4).grid(row=4, column=8, columnspan=2, sticky=tk.E)
+        cb = 9
+        tk.Label(self.root_win, text='dec:', width=4).grid(row=4, column=cb, columnspan=2, sticky=tk.E)
         self.dec_show = tk.StringVar(self.root_win, '0')
-        self.entry_dec = tk.Entry(self.root_win, width=20, textvariable=self.dec_show)
-        self.entry_dec.grid(row=4, column=10, columnspan=10, sticky=tk.W)
+        self.entry_dec = tk.Entry(self.root_win, width=22, textvariable=self.dec_show)
+        self.entry_dec.grid(row=4, column=cb+2, columnspan=22, sticky=tk.W)
 
         # left and right shift
-        tk.Button(self.root_win, text='<<', width=2, command=self.left_shift).grid(row=4, column=25, columnspan=2,
+        cb = 19
+        tk.Button(self.root_win, text='<', width=1, command=self.left_shift).grid(row=4, column=cb, columnspan=2,
                                                                                    sticky=tk.E)
         self.shift_val = tk.StringVar(self.root_win, '01')
         self.entry_shift_val = tk.Entry(self.root_win, width=2, textvariable=self.shift_val)
-        self.entry_shift_val.grid(row=4, column=27, columnspan=2)
-        tk.Button(self.root_win, text='>>', width=2, command=self.right_shift).grid(row=4, column=29, columnspan=2,
+        self.entry_shift_val.grid(row=4, column=cb + 2, columnspan=2)
+        tk.Button(self.root_win, text='>', width=1, command=self.right_shift).grid(row=4, column=cb + 4, columnspan=2,
                                                                                     sticky=tk.W)
+        # bit flip
+        cb = 25
+        tk.Button(self.root_win, text='bit flip', width=8, command=self.bit_flip).grid(row=4, column=cb, columnspan=2)
+
+        # help
+        cb = 28
+        tk.Button(self.root_win, text='help', width=4, command=self.help).grid(row=4, column=cb, columnspan=2)
 
         # keep top
+        cb = 31
         self.top_v = tk.IntVar()
         self.top = tk.Checkbutton(self.root_win, width=4, text='top', variable=self.top_v)
-        self.top.grid(row=4, column=31, columnspan=4, sticky=tk.W)
+        self.top.grid(row=4, column=cb, columnspan=4, sticky=tk.W)
 
         # calculation area
         tk.Label(self.root_win, textvariable=self.cal_str, width=117).grid(row=5, column=0, columnspan=39)
@@ -128,8 +139,8 @@ class CoreData:
                 self.button_list[i].configure(text=b_text, bg=bg_zero)
 
     def refresh_all_no_records(self, dec):
-        if self.dec > 18446744073709551615:
-            self.dec = 18446744073709551615
+        if dec > 18446744073709551615:
+            dec = self.dec
         self.dec = dec
         dec_temp = self.dec
         for i in range(0, 64):
@@ -164,7 +175,7 @@ class CoreData:
         if len(self.hex_show.get()) < 2 or self.hex_show.get()[0:2] != '0x':
             hex_s = self.hex_show.get()
             num_s = 0
-            for i in range(len(hex_s)-1, -1, -1):
+            for i in range(len(hex_s) - 1, -1, -1):
                 num_s = i
                 if hex_s[i] in "0123456789ABCDEFabcdef":
                     continue
@@ -172,7 +183,7 @@ class CoreData:
                     break
             if num_s == 0:
                 num_s = -1
-            hex_s = '0x' + hex_s[num_s+1:len(hex_s)]
+            hex_s = '0x' + hex_s[num_s + 1:len(hex_s)]
             self.refresh_all(int(hex_s, 16))
             win32api.keybd_event(35, 0, 0, 0)
 
@@ -193,6 +204,9 @@ class CoreData:
         dec = int(self.dec_show.get()) >> shift
         self.refresh_all(dec)
 
+    def bit_flip(self):
+        self.refresh_all(18446744073709551615 - self.dec)
+
     '''  '''
 
     def bg_process(self, arg1, arg2):
@@ -209,7 +223,7 @@ class CoreData:
             except ValueError:
                 pass
 
-            time.sleep(0.1)
+            time.sleep(0.01)
 
     def del_invalid_in_input(self, c):
         valid_char = "0123456789abcdefABCDEF"
@@ -260,9 +274,11 @@ class CoreData:
             dec = self.cal_data.cal_rlt(self.dec)
             self.refresh_all(dec)
             self.cal_str.set(self.cal_data.cal_str)
+            win32api.keybd_event(35, 0, 0, 0)
         if self.cal_data.is_opts_valid(event.char):
             self.cal_data.update_x1(self.dec, event.char)
             self.cal_str.set(self.cal_data.cal_str)
+            self.refresh_all_no_records(0)
 
         if event.char == 'h':
             self.left_shift()
@@ -296,6 +312,23 @@ class CoreData:
                 self.top_v.set(1)
             else:
                 self.top_v.set(0)
+
+        if event.char == '?' or event.char == '？':
+            self.help()
+
+    @staticmethod
+    def help():
+        help_str = \
+            '?\t\t: show this help window\n' + \
+            'shift + 1\t\t: focus to hex entry\n' + \
+            'shift + 2\t\t: focus to dec entry\n' + \
+            'shift + 3\t\t: focus to shift val entry\n' + \
+            'h \ l \ j \ k\t\t: left/right/up/down shift the val\n' + \
+            '+ \ - \ * \ / \ & \ |\t: the operator\n' + \
+            '=\t\t: do the calculation\n' + \
+            'z \ x\t\t: restore \ de-restore\n' + \
+            ',t\t\t: keep on the top'
+        tk.messagebox.askokcancel(title='shortcuts', message=help_str)
 
 
 CoreData()
