@@ -4,6 +4,10 @@ import time
 import _thread
 import win32api
 
+
+#from pynput.keyboard import Listener
+import pynput
+
 bg_zero = "#f0f0f0"
 bg_one = "#c0c0c0"
 
@@ -40,11 +44,14 @@ class CalData:
         elif self.opt == "*":
             self.rlt = self.x1 * x2
         elif self.opt == "/":
+            #self.rlt = int(self.x1 / x2)
             self.rlt = self.x1 / x2
         elif self.opt == "&":
             self.rlt = self.x1 & x2
         elif self.opt == "|":
             self.rlt = self.x1 | x2
+
+        self.rlt = int(self.rlt)
 
         self.cal_str = hex(self.x1) + ' ' + self.opt + ' ' + hex(x2) + ' = ' + hex(self.rlt)
         return self.rlt
@@ -126,7 +133,22 @@ class CoreData:
 
         self.root_win.bind("<Key>", self.key_respond)
         _thread.start_new_thread(self.bg_process, ("Thread-1", 2,))
+
+        _thread.start_new_thread(self.start_listener, ("Thread-2", 2,))
+
+
         tk.mainloop()
+
+    def press(self, key):
+        print(key)
+        if key == pynput.keyboard.Key.value('\x02'):
+            print("ddddddd")
+            self.root_win.wm_attributes('-topmost', 1)
+            self.entry_dec.focus_set()
+
+    def start_listener(self, arg1, arg2):
+        with pynput.keyboard.Listener(on_press=self.press) as listener:
+            listener.join()
 
     def show_all(self):
         self.hex_show.set(self.hex)
