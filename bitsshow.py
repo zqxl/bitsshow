@@ -4,8 +4,7 @@ import time
 import _thread
 import win32api
 
-
-#from pynput.keyboard import Listener
+# from pynput.keyboard import Listener
 import pynput
 
 bg_zero = "#f0f0f0"
@@ -44,7 +43,7 @@ class CalData:
         elif self.opt == "*":
             self.rlt = self.x1 * x2
         elif self.opt == "/":
-            #self.rlt = int(self.x1 / x2)
+            # self.rlt = int(self.x1 / x2)
             self.rlt = self.x1 / x2
         elif self.opt == "&":
             self.rlt = self.x1 & x2
@@ -55,6 +54,11 @@ class CalData:
 
         self.cal_str = hex(self.x1) + ' ' + self.opt + ' ' + hex(x2) + ' = ' + hex(self.rlt)
         return self.rlt
+
+
+def get_bits_val(val, bit_start, bit_end):
+    mask = (1 << (bit_end - bit_start + 1)) - 1
+    return (val >> bit_start) & mask
 
 
 class CoreData:
@@ -70,9 +74,19 @@ class CoreData:
         self.wait_cmd_str = ""
 
         self.cal_data = CalData()
-        self.cal_str = tk.StringVar(self.root_win, '')
+        self.cal_str = tk.StringVar(self.root_win, '0+0=0')
 
-        # button area
+        # [[end, start], [end, start], ...]
+        self.bits_extract_pos = []
+        # [num1,         num2,         ...]
+        self.bits_extract_rst = []
+
+        self.bits_extract_hdl_entry_bits_start = []
+        self.bits_extract_hdl_entry_bits_end = []
+        self.bits_extract_hdl_entry_rst_hex = []
+        self.bits_extract_hdl_entry_rst_dec = []
+
+        # ########################################### button area ############################################
         self.button_list = [tk.Button(self.root_win, text="0") for x in range(0, 64)]
         button_index = 64
         for row in range(0, 2):
@@ -93,51 +107,126 @@ class CoreData:
                     tk.Label(self.root_win, text=button_index, width=1, font=("", 8)) \
                         .grid(row=row * 2 + 1, column=column, sticky=tk.W)
 
-        # hex and dec area
-        tk.Label(self.root_win, text='hex:', width=4).grid(row=4, column=0, columnspan=2, sticky=tk.E)
+        # ########################################### hex and dec area ############################################
+        g_row = 4
+        tk.Label(self.root_win, text='hex:', width=4).grid(row=g_row, column=0, columnspan=2, sticky=tk.E)
         self.hex_show = tk.StringVar(self.root_win, '0x0')
         self.entry_hex = tk.Entry(self.root_win, width=20, textvariable=self.hex_show)
-        self.entry_hex.grid(row=4, column=2, columnspan=10, sticky=tk.W)
+        self.entry_hex.grid(row=g_row, column=2, columnspan=10, sticky=tk.W)
 
         cb = 9
-        tk.Label(self.root_win, text='dec:', width=4).grid(row=4, column=cb, columnspan=2, sticky=tk.E)
+        tk.Label(self.root_win, text='dec:', width=4).grid(row=g_row, column=cb, columnspan=2, sticky=tk.E)
         self.dec_show = tk.StringVar(self.root_win, '0')
         self.entry_dec = tk.Entry(self.root_win, width=22, textvariable=self.dec_show)
-        self.entry_dec.grid(row=4, column=cb+2, columnspan=22, sticky=tk.W)
+        self.entry_dec.grid(row=g_row, column=cb + 2, columnspan=22, sticky=tk.W)
 
         # left and right shift
         cb = 19
-        tk.Button(self.root_win, text='<', width=1, command=self.left_shift).grid(row=4, column=cb, columnspan=2,
-                                                                                   sticky=tk.E)
+        tk.Button(self.root_win, text='<', width=1, command=self.left_shift).grid(row=g_row, column=cb, columnspan=2,
+                                                                                  sticky=tk.E)
         self.shift_val = tk.StringVar(self.root_win, '01')
         self.entry_shift_val = tk.Entry(self.root_win, width=2, textvariable=self.shift_val)
-        self.entry_shift_val.grid(row=4, column=cb + 2, columnspan=2)
-        tk.Button(self.root_win, text='>', width=1, command=self.right_shift).grid(row=4, column=cb + 4, columnspan=2,
-                                                                                    sticky=tk.W)
+        self.entry_shift_val.grid(row=g_row, column=cb + 2, columnspan=2)
+        tk.Button(self.root_win, text='>', width=1, command=self.right_shift).grid(row=g_row, column=cb + 4,
+                                                                                   columnspan=2, sticky=tk.W)
         # bit flip
         cb = 25
-        tk.Button(self.root_win, text='bit flip', width=8, command=self.bit_flip).grid(row=4, column=cb, columnspan=2)
+        tk.Button(self.root_win, text='bit flip', width=8, command=self.bit_flip).grid(row=g_row, column=cb,
+                                                                                       columnspan=2)
 
-        # help
-        cb = 28
-        tk.Button(self.root_win, text='help', width=4, command=self.help).grid(row=4, column=cb, columnspan=2)
+        # add bits grp
+        cb = 26
+        tk.Button(self.root_win, text='add bits grp', width=12, command=self.add_bit_extract_group).grid(row=g_row,
+                                                                                                         column=cb,
+                                                                                                         columnspan=8)
 
         # keep top
-        cb = 31
+        cb = 33
         self.top_v = tk.IntVar()
         self.top = tk.Checkbutton(self.root_win, width=4, text='top', variable=self.top_v)
-        self.top.grid(row=4, column=cb, columnspan=4, sticky=tk.W)
+        self.top.grid(row=g_row, column=cb, columnspan=4, sticky=tk.W)
 
-        # calculation area
-        tk.Label(self.root_win, textvariable=self.cal_str, width=117).grid(row=5, column=0, columnspan=39)
+        # help
+        cb = 35
+        tk.Button(self.root_win, text='help', width=4, command=self.help).grid(row=g_row, column=cb, columnspan=4)
+
+        # ########################################### calculation area ############################################
+        g_row = g_row + 1
+        t = tk.LabelFrame(self.root_win, text='calc', labelanchor='w')
+        t.grid(row=g_row, column=0, columnspan=40, pady=5)
+
+        tk.Label(t, textvariable=self.cal_str, width=100).grid(row=g_row, column=0)
 
         self.root_win.bind("<Key>", self.key_respond)
         _thread.start_new_thread(self.bg_process, ("Thread-1", 2,))
 
         _thread.start_new_thread(self.start_listener, ("Thread-2", 2,))
 
+        # ########################################### bits extract area ############################################
+        g_row = g_row + 1
 
+        self.frame_bits_extract = tk.LabelFrame(self.root_win, text='bits', labelanchor='w')
+        self.frame_bits_extract.grid(row=g_row, column=0, columnspan=64, sticky=tk.W)
+
+        self.add_bit_extract_group()
+
+        # ########################################### MAIN LOOP ############################################
         tk.mainloop()
+
+    def add_bit_extract_group(self):
+        """
+                self.bits_extract_hdl_entry_bits_start = []
+                self.bits_extract_hdl_entry_bits_end = []
+                self.bits_extract_hdl_entry_rst_hex = []
+                self.bits_extract_hdl_entry_rst_dec = []
+        """
+        row = len(self.bits_extract_hdl_entry_bits_start)
+
+        # save vars
+        self.bits_extract_pos.append(
+            [tk.StringVar(self.frame_bits_extract, str(4 * row)), tk.StringVar(self.root_win, str(4 * row + 3))])
+        self.bits_extract_rst.append(
+            [tk.StringVar(self.frame_bits_extract, '0'), tk.StringVar(self.root_win, '0')])
+
+        BITS_EXTRACE_RST_WIDTH = 10
+        # save component handles
+        self.bits_extract_hdl_entry_bits_start.append(
+            tk.Entry(self.frame_bits_extract, width=2, textvariable=self.bits_extract_pos[-1][0]))
+        self.bits_extract_hdl_entry_bits_end.append(
+            tk.Entry(self.frame_bits_extract, width=2, textvariable=self.bits_extract_pos[-1][1]))
+
+        self.bits_extract_hdl_entry_rst_hex.append(
+            tk.Entry(self.frame_bits_extract, width=BITS_EXTRACE_RST_WIDTH, textvariable=self.bits_extract_rst[-1][0]))
+        self.bits_extract_hdl_entry_rst_dec.append(
+            tk.Entry(self.frame_bits_extract, width=BITS_EXTRACE_RST_WIDTH, textvariable=self.bits_extract_rst[-1][1]))
+
+        row = row + 1
+        cb = 0
+
+        tk.Label(self.frame_bits_extract, text='from:', width=4).grid(row=row, column=cb, sticky=tk.E)
+        cb = cb + 4
+        self.bits_extract_hdl_entry_bits_start[-1].grid(row=row, column=cb, columnspan=2)
+        cb = cb + 2
+
+        tk.Label(self.frame_bits_extract, text='to:', width=2).grid(row=row, column=cb, sticky=tk.E)
+        cb = cb + 2
+        self.bits_extract_hdl_entry_bits_end[-1].grid(row=row, column=cb, columnspan=2)
+        cb = cb + 16
+
+        tk.Label(self.frame_bits_extract, text='val hex:', width=8).grid(row=row, column=cb, sticky=tk.W)
+        cb = cb + 8
+        self.bits_extract_hdl_entry_rst_hex[-1].grid(row=row, column=cb, columnspan=BITS_EXTRACE_RST_WIDTH)
+        cb = cb + BITS_EXTRACE_RST_WIDTH
+
+        tk.Label(self.frame_bits_extract, text='val dec:', width=8).grid(row=row, column=cb, sticky=tk.E)
+        cb = cb + 8
+        self.bits_extract_hdl_entry_rst_dec[-1].grid(row=row, column=cb, columnspan=BITS_EXTRACE_RST_WIDTH)
+        cb = cb + BITS_EXTRACE_RST_WIDTH
+
+        self.show_all()
+
+    def del_bit_extract_group(self):
+        pass
 
     def press(self, key):
         print(key)
@@ -159,6 +248,13 @@ class CoreData:
                 self.button_list[i].configure(text=b_text, bg=bg_one)
             else:
                 self.button_list[i].configure(text=b_text, bg=bg_zero)
+
+        for i in range(0, len(self.bits_extract_pos)):
+            s = int(self.bits_extract_pos[i][0].get())
+            e = int(self.bits_extract_pos[i][1].get())
+            val = get_bits_val(self.dec, s, e)
+            self.bits_extract_rst[i][0].set(hex(val))
+            self.bits_extract_rst[i][1].set(str(val))
 
     def refresh_all_no_records(self, dec):
         if dec > 18446744073709551615:
@@ -354,3 +450,5 @@ class CoreData:
 
 
 CoreData()
+get_bits_val(0x345f212, 0, 3)
+exit(0)
