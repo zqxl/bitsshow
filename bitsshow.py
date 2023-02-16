@@ -9,6 +9,7 @@ import pynput
 
 bg_zero = "#f0f0f0"
 bg_one = "#c0c0c0"
+bg_to_pressed = "#c0c0c0"
 
 
 class CalData:
@@ -60,6 +61,11 @@ def get_bits_val(val, bit_start, bit_end):
     mask = (1 << (bit_end - bit_start + 1)) - 1
     return (val >> bit_start) & mask
 
+def set_bits_val(val, bit_start, bit_end, bit_val):
+    mask = (1 << (bit_end - bit_start + 1)) - 1
+    val = val & (~(mask << bit_start))
+    val = val | (bit_val << bit_start)
+    return val
 
 class CoreData:
     def __init__(self):
@@ -85,8 +91,15 @@ class CoreData:
         self.bits_extract_hdl_entry_bits_end = []
         self.bits_extract_hdl_entry_rst_hex = []
         self.bits_extract_hdl_entry_rst_dec = []
+        self.bits_extract_hdl_btn_set_val = []
+        self.bits_extract_hdl_btn_destroy = []
 
-        # ########################################### button area ############################################
+        self.bits_extract_hdl_lab_from = []
+        self.bits_extract_hdl_lab_to = []
+        self.bits_extract_hdl_lab_hex = []
+        self.bits_extract_hdl_lab_dec = []
+
+        # ########################################### bit button area ############################################
         self.button_list = [tk.Button(self.root_win, text="0") for x in range(0, 64)]
         button_index = 64
         for row in range(0, 2):
@@ -166,7 +179,7 @@ class CoreData:
         g_row = g_row + 1
 
         self.frame_bits_extract = tk.LabelFrame(self.root_win, text='bits', labelanchor='w')
-        self.frame_bits_extract.grid(row=g_row, column=0, columnspan=64, sticky=tk.W)
+        self.frame_bits_extract.grid(row=g_row, column=0, columnspan=96, sticky=tk.W)
 
         self.add_bit_extract_group()
 
@@ -200,33 +213,100 @@ class CoreData:
         self.bits_extract_hdl_entry_rst_dec.append(
             tk.Entry(self.frame_bits_extract, width=BITS_EXTRACE_RST_WIDTH, textvariable=self.bits_extract_rst[-1][1]))
 
+        self.bits_extract_hdl_btn_set_val.append(
+            tk.Button(self.frame_bits_extract, text='set val', width=6))
+        self.bits_extract_hdl_btn_set_val[-1].bind("<Button-1>", self.bits_extract_btn_cb_set_val)
+
+        self.bits_extract_hdl_btn_destroy.append(
+            tk.Button(self.frame_bits_extract, text='X', width=1))
+        self.bits_extract_hdl_btn_destroy[-1].bind("<Button-1>", self.del_bit_extract_group)
         row = row + 1
         cb = 0
 
-        tk.Label(self.frame_bits_extract, text='from:', width=4).grid(row=row, column=cb, sticky=tk.E)
+        self.bits_extract_hdl_lab_from.append(tk.Label(self.frame_bits_extract, text='from:', width=4))
+        self.bits_extract_hdl_lab_from[-1].grid(row=row, column=cb, sticky=tk.E)
         cb = cb + 4
         self.bits_extract_hdl_entry_bits_start[-1].grid(row=row, column=cb, columnspan=2)
         cb = cb + 2
 
-        tk.Label(self.frame_bits_extract, text='to:', width=2).grid(row=row, column=cb, sticky=tk.E)
+        self.bits_extract_hdl_lab_to.append(tk.Label(self.frame_bits_extract, text='to:', width=2))
+        self.bits_extract_hdl_lab_to[-1].grid(row=row, column=cb, sticky=tk.E)
         cb = cb + 2
         self.bits_extract_hdl_entry_bits_end[-1].grid(row=row, column=cb, columnspan=2)
         cb = cb + 16
 
-        tk.Label(self.frame_bits_extract, text='val hex:', width=8).grid(row=row, column=cb, sticky=tk.W)
+        self.bits_extract_hdl_lab_hex.append(tk.Label(self.frame_bits_extract, text='val hex:', width=8))
+        self.bits_extract_hdl_lab_hex[-1].grid(row=row, column=cb, sticky=tk.W)
         cb = cb + 8
         self.bits_extract_hdl_entry_rst_hex[-1].grid(row=row, column=cb, columnspan=BITS_EXTRACE_RST_WIDTH)
         cb = cb + BITS_EXTRACE_RST_WIDTH
 
-        tk.Label(self.frame_bits_extract, text='val dec:', width=8).grid(row=row, column=cb, sticky=tk.E)
+        self.bits_extract_hdl_lab_dec.append(tk.Label(self.frame_bits_extract, text='val dec:', width=8))
+        self.bits_extract_hdl_lab_dec[-1].grid(row=row, column=cb, sticky=tk.E)
         cb = cb + 8
         self.bits_extract_hdl_entry_rst_dec[-1].grid(row=row, column=cb, columnspan=BITS_EXTRACE_RST_WIDTH)
         cb = cb + BITS_EXTRACE_RST_WIDTH
 
+        self.bits_extract_hdl_btn_set_val[-1].grid(row=row, column=cb, columnspan=6, sticky=tk.W, padx=6)
+        cb = cb + 6
+
+        self.bits_extract_hdl_btn_destroy[-1].grid(row=row, column=cb, columnspan=1, sticky=tk.W, padx=3)
+        cb = cb + 1
+
         self.show_all()
 
-    def del_bit_extract_group(self):
-        pass
+    def del_bit_extract_group(self, event):
+        event.widget['bg'] = bg_to_pressed
+
+        for i in range(0, len(self.bits_extract_pos)):
+            if self.bits_extract_hdl_btn_destroy[i]['bg'] == bg_to_pressed:
+                print(i)
+                self.bits_extract_pos.pop(i)
+                self.bits_extract_rst.pop(i)
+
+                self.bits_extract_hdl_entry_bits_start[i].destroy()
+                self.bits_extract_hdl_entry_bits_end[i].destroy()
+                self.bits_extract_hdl_entry_rst_hex[i].destroy()
+                self.bits_extract_hdl_entry_rst_dec[i].destroy()
+                self.bits_extract_hdl_btn_set_val[i].destroy()
+                self.bits_extract_hdl_btn_destroy[i].destroy()
+                self.bits_extract_hdl_lab_from[i].destroy()
+                self.bits_extract_hdl_lab_to[i].destroy()
+                self.bits_extract_hdl_lab_hex[i].destroy()
+                self.bits_extract_hdl_lab_dec[i].destroy()
+
+                self.bits_extract_hdl_entry_bits_start.pop(i)
+                self.bits_extract_hdl_entry_bits_end.pop(i)
+                self.bits_extract_hdl_entry_rst_hex.pop(i)
+                self.bits_extract_hdl_entry_rst_dec.pop(i)
+                self.bits_extract_hdl_btn_set_val.pop(i)
+                self.bits_extract_hdl_btn_destroy.pop(i)
+                self.bits_extract_hdl_lab_from.pop(i)
+                self.bits_extract_hdl_lab_to.pop(i)
+                self.bits_extract_hdl_lab_hex.pop(i)
+                self.bits_extract_hdl_lab_dec.pop(i)
+                break
+
+    def bits_extract_btn_cb_set_val(self, event):
+        event.widget['bg'] = bg_to_pressed
+
+        for i in range(0, len(self.bits_extract_pos)):
+            if self.bits_extract_hdl_btn_set_val[i]['bg'] == bg_to_pressed:
+                s = int(self.bits_extract_pos[i][0].get())
+                e = int(self.bits_extract_pos[i][1].get())
+
+                origin_val = get_bits_val(self.dec, s, e)
+                hex_val = int(self.bits_extract_rst[i][0].get(), 16)
+                dec_val = int(self.bits_extract_rst[i][1].get(), 10)
+                if origin_val == hex_val:
+                    val = dec_val
+                else:
+                    val = hex_val
+
+                self.dec = set_bits_val(self.dec, s, e, val)
+                self.refresh_all(self.dec)
+
+                self.bits_extract_hdl_btn_set_val[i]['bg'] = bg_zero
 
     def press(self, key):
         print(key)
@@ -308,8 +388,18 @@ class CoreData:
     def find_input_entry_and_update(self):
         if self.dec_show.get() != '' and int(self.dec_show.get(), 10) != self.dec:
             self.refresh_all(int(self.dec_show.get(), 10))
+            return
         if self.hex_show.get() != '' and int(self.hex_show.get(), 16) != self.dec:
             self.refresh_all(int(self.hex_show.get(), 16))
+            return
+
+        for i in range(0, len(self.bits_extract_pos)):
+            s = int(self.bits_extract_pos[i][0].get())
+            e = int(self.bits_extract_pos[i][1].get())
+            val = get_bits_val(self.dec, s, e)
+            if val != int(self.bits_extract_rst[i][1].get(), 10):
+                self.show_all()
+                return
 
     # shift operation
     def left_shift(self):
