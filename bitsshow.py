@@ -63,6 +63,7 @@ def get_bits_val(val, bit_start, bit_end):
 
 def set_bits_val(val, bit_start, bit_end, bit_val):
     mask = (1 << (bit_end - bit_start + 1)) - 1
+    bit_val = bit_val & mask
     val = val & (~(mask << bit_start))
     val = val | (bit_val << bit_start)
     return val
@@ -149,7 +150,7 @@ class CoreData:
 
         # add bits grp
         cb = 26
-        tk.Button(self.root_win, text='add bits grp', width=12, command=self.add_bit_extract_group).grid(row=g_row,
+        tk.Button(self.root_win, text='add bits grp', width=12, command=self.bit_extract_group_add).grid(row=g_row,
                                                                                                          column=cb,
                                                                                                          columnspan=8)
 
@@ -173,7 +174,6 @@ class CoreData:
         self.root_win.bind("<Key>", self.key_respond)
         _thread.start_new_thread(self.bg_process, ("Thread-1", 2,))
 
-        _thread.start_new_thread(self.start_listener, ("Thread-2", 2,))
 
         # ########################################### bits extract area ############################################
         g_row = g_row + 1
@@ -181,12 +181,15 @@ class CoreData:
         self.frame_bits_extract = tk.LabelFrame(self.root_win, text='bits', labelanchor='w')
         self.frame_bits_extract.grid(row=g_row, column=0, columnspan=96, sticky=tk.W)
 
-        self.add_bit_extract_group()
+        self.bit_extract_group_add()
 
         # ########################################### MAIN LOOP ############################################
         tk.mainloop()
 
-    def add_bit_extract_group(self):
+    def bits_extract_update(self, *args):
+        self.show_all()
+
+    def bit_extract_group_add(self):
         """
                 self.bits_extract_hdl_entry_bits_start = []
                 self.bits_extract_hdl_entry_bits_end = []
@@ -198,6 +201,7 @@ class CoreData:
         # save vars
         self.bits_extract_pos.append(
             [tk.StringVar(self.frame_bits_extract, str(4 * row)), tk.StringVar(self.root_win, str(4 * row + 3))])
+        self.bits_extract_pos[-1][0].trace("w", lambda name, index, mode, var=self: self.bits_extract_update(self))
         self.bits_extract_rst.append(
             [tk.StringVar(self.frame_bits_extract, '0'), tk.StringVar(self.root_win, '0')])
 
@@ -219,7 +223,7 @@ class CoreData:
 
         self.bits_extract_hdl_btn_destroy.append(
             tk.Button(self.frame_bits_extract, text='X', width=1))
-        self.bits_extract_hdl_btn_destroy[-1].bind("<Button-1>", self.del_bit_extract_group)
+        self.bits_extract_hdl_btn_destroy[-1].bind("<Button-1>", self.bit_extract_group_del)
         row = row + 1
         cb = 0
 
@@ -255,7 +259,7 @@ class CoreData:
 
         self.show_all()
 
-    def del_bit_extract_group(self, event):
+    def bit_extract_group_del(self, event):
         event.widget['bg'] = bg_to_pressed
 
         for i in range(0, len(self.bits_extract_pos)):
@@ -308,18 +312,8 @@ class CoreData:
 
                 self.bits_extract_hdl_btn_set_val[i]['bg'] = bg_zero
 
-    def press(self, key):
-        print(key)
-        if key == pynput.keyboard.Key.value('\x02'):
-            print("ddddddd")
-            self.root_win.wm_attributes('-topmost', 1)
-            self.entry_dec.focus_set()
-
-    def start_listener(self, arg1, arg2):
-        with pynput.keyboard.Listener(on_press=self.press) as listener:
-            listener.join()
-
     def show_all(self):
+        print("show_all")
         self.hex_show.set(self.hex)
         self.dec_show.set(self.dec)
         for i in range(0, 64):
@@ -330,8 +324,14 @@ class CoreData:
                 self.button_list[i].configure(text=b_text, bg=bg_zero)
 
         for i in range(0, len(self.bits_extract_pos)):
-            s = int(self.bits_extract_pos[i][0].get())
-            e = int(self.bits_extract_pos[i][1].get())
+            t_s = self.bits_extract_pos[i][0].get()
+            t_e = self.bits_extract_pos[i][1].get()
+            if t_s == '' or t_e == '':
+                continue
+
+            s = int(t_s)
+            e = int(t_e)
+
             val = get_bits_val(self.dec, s, e)
             self.bits_extract_rst[i][0].set(hex(val))
             self.bits_extract_rst[i][1].set(str(val))
@@ -393,14 +393,6 @@ class CoreData:
             self.refresh_all(int(self.hex_show.get(), 16))
             return
 
-        for i in range(0, len(self.bits_extract_pos)):
-            s = int(self.bits_extract_pos[i][0].get())
-            e = int(self.bits_extract_pos[i][1].get())
-            val = get_bits_val(self.dec, s, e)
-            if val != int(self.bits_extract_rst[i][1].get(), 10):
-                self.show_all()
-                return
-
     # shift operation
     def left_shift(self):
         shift = int(self.shift_val.get())
@@ -431,7 +423,7 @@ class CoreData:
             except ValueError:
                 pass
 
-            time.sleep(0.01)
+            time.sleep(0.100)
 
     def del_invalid_in_input(self, c):
         valid_char = "0123456789abcdefABCDEF"
